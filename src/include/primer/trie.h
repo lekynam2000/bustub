@@ -105,6 +105,9 @@ class Trie {
   // Create a new trie with the given root.
   explicit Trie(std::shared_ptr<const TrieNode> root) : root_(std::move(root)) {}
 
+  auto GetOne(std::shared_ptr<const TrieNode> node, char c) const -> const std::shared_ptr<const TrieNode>;
+
+
  public:
   // Create an empty trie.
   Trie() = default;
