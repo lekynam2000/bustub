@@ -42,7 +42,7 @@ void TrieStore::Remove(std::string_view key) {
   root_lock_.lock();
   Trie trie_root = root_;
   root_lock_.unlock();
-  Trie new_root = trie_root.Put(key, std::move(value));
+  Trie new_root = trie_root.Remove(key);
   root_lock_.lock();
   this->root_ = new_root;
   root_lock_.unlock();
