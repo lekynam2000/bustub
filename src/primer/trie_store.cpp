@@ -15,9 +15,9 @@ auto TrieStore::Get(std::string_view key) -> std::optional<ValueGuard<T>> {
   root_lock_.lock();
   Trie trie_root = root_;
   root_lock_.unlock();
-  const T * valuePtr = trie_root.Get(key);
+  const T * valuePtr = trie_root.Get<T>(key);
   if(valuePtr==nullptr) return std::nullopt;
-  return ValueGuard(trie_root, valuePtr);
+  return ValueGuard(trie_root, *valuePtr);
 
 }
 
@@ -29,7 +29,7 @@ void TrieStore::Put(std::string_view key, T value) {
   root_lock_.lock();
   Trie trie_root = root_;
   root_lock_.unlock();
-  Trie new_root = trie_root.Put(key, std::move(value));
+  Trie new_root = trie_root.Put<T>(key, std::move(value));
   root_lock_.lock();
   this->root_ = new_root;
   root_lock_.unlock();

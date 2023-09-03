@@ -44,7 +44,7 @@ class MoveBlocked {
 class TrieNode {
  public:
   // Create a TrieNode with no children.
-  TrieNode() = default;
+  TrieNode(){children_ = std::map<char, std::shared_ptr<const TrieNode>>();};
 
   // Create a TrieNode with some children.
   explicit TrieNode(std::map<char, std::shared_ptr<const TrieNode>> children) : children_(std::move(children)) {}
@@ -100,12 +100,12 @@ class TrieNodeWithValue : public TrieNode {
 class Trie {
  private:
   // The root of the trie.
-  std::shared_ptr<const TrieNode> root_{nullptr};
+  std::shared_ptr<const TrieNode> root_{std::make_shared<const TrieNode>()};
 
   // Create a new trie with the given root.
   explicit Trie(std::shared_ptr<const TrieNode> root) : root_(std::move(root)) {}
 
-  auto GetOne(std::shared_ptr<const TrieNode> node, char c) const -> const std::shared_ptr<const TrieNode>;
+  auto GetOne(std::shared_ptr<TrieNode> node, char c) const -> std::shared_ptr<TrieNode>;
 
 
  public:

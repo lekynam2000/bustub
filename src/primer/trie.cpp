@@ -12,38 +12,44 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
 
-  std::shared_ptr<const TrieNode> curr = this->root_ ;
-  for(int i=0;i<key.size();i++){
+  std::shared_ptr<TrieNode> curr = root_->Clone() ;
+  int len = static_cast<int>(key.size());
+  for(int i=0;i<len;i++){
     curr = this->GetOne(curr, key[i]);
     if(curr==nullptr) return nullptr;
   }
   auto node = dynamic_cast<const TrieNodeWithValue<T> *>(curr.get());
   if(node == nullptr) return nullptr;
-  return node->value_;
+  return node->value_.get();
 }
 
 template <class T>
 auto Trie::Put(std::string_view key, T value) const -> Trie {
   // Note that `T` might be a non-copyable type. Always use `std::move` when creating `shared_ptr` on that value.
-  std::shared_ptr<const TrieNode> newroot = std::shared_ptr<const TrieNode>(std::move(this->root->Clone())); 
-  std::shared_ptr<const TrieNode> parent = nullptr, curr=newroot;
+  auto temp_ = this->root_->Clone();
+  std::shared_ptr<TrieNode> newroot = std::shared_ptr<TrieNode>(std::move(temp_)); 
+  std::shared_ptr<TrieNode> parent = nullptr, curr=newroot;
   int i=0;
-  for(i=0;i<key.size();i++){
+  int len = static_cast<int>(key.size());
+
+  for(i=0;i<len;i++){
     parent = curr;
     curr = this->GetOne(parent,key[i]);
     
     if(curr==nullptr){
-      curr = std::make_shared<const TrieNode>();
+      curr = std::make_shared<TrieNode>();
       parent->children_[key[i]] = curr;
     }
     else{
-      parent->children_[key[i]] = std::shared_ptr<const TrieNode>(std::move(curr->Clone()));
+      auto temp_ = curr->Clone();
+      parent->children_[key[i]] = std::shared_ptr<TrieNode>(std::move(temp_));
     }
+    std::cout<<key[i]<<"\n";
   }
 
   //create new curr with old curr children and parent but with new value
-
-  auto newcurr = std::make_shared<const TrieNodeWithValue T >(curr->children_, std::move(value));
+  std::cout<<"back"<<key.back()<<"\n";
+  auto newcurr = std::make_shared<const TrieNodeWithValue<T>>(curr->children_, std::make_shared<T>(std::move(value)));
   parent->children_[key.back()] = newcurr;
   return Trie(newroot);
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
@@ -51,16 +57,20 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
-  std::shared_ptr<const TrieNode> newroot = std::shared_ptr<const TrieNode>(std::move(this->root_->Clone())); 
-  std::shared_ptr<const TrieNode> parent = nullptr, curr=newroot;
+  auto temp_ = root_->Clone();
+  std::shared_ptr<TrieNode> newroot = std::shared_ptr<TrieNode>(std::move(temp_)); 
+  std::shared_ptr<TrieNode> parent = nullptr, curr=newroot;
   int i=0;
-  for(i=0;i<key.size();i++){
+  int len = static_cast<int>(key.size());
+
+  for(i=0;i<len;i++){
     parent = curr;
     curr = this->GetOne(curr,key[i]);
     
     if(curr==nullptr) return *this;
     else{
-      parent->children_[key[i]] = std::shared_ptr<const TrieNode>(std::move(curr->Clone()));
+      auto temp_ = curr->Clone();
+      parent->children_[key[i]] = std::shared_ptr<const TrieNode>(std::move(temp_));
     }
   }
   auto newchild = std::make_shared<const TrieNode>(curr->children_);
@@ -76,10 +86,11 @@ auto Trie::Remove(std::string_view key) const -> Trie {
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
 }
 
-auto Trie::GetOne(std::shared_ptr<const TrieNode> node, char c) const -> const std::shared_ptr<const TrieNode>{  
-  std::shared_ptr<const TrieNode> newroot;
+auto Trie::GetOne(std::shared_ptr<TrieNode> node, char c) const -> std::shared_ptr<TrieNode>{  
+  std::shared_ptr<TrieNode> newroot;
   if(node->children_.find(c)!=node->children_.end()){
-    return node->children_[c];
+    auto re=node->children_[c]->Clone();
+    return std::shared_ptr<TrieNode>(std::move(re));
   }
   return nullptr;
 }
