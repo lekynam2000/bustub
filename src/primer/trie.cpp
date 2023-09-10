@@ -41,8 +41,8 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     }
     else{
       auto temp_ = curr->Clone();
-      parent->children_[key[i]] = std::shared_ptr<TrieNode>(std::move(temp_));
-      curr = parent->children_[key[i]];
+      curr = std::shared_ptr<TrieNode>(std::move(temp_));
+      parent->children_[key[i]]=curr;
     }
     // std::cout<<key[i]<<"\n";
   }
