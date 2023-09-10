@@ -76,7 +76,8 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     if(curr==nullptr) return *this;
     else{
       auto temp_ = curr->Clone();
-      parent->children_[key[i]] = std::shared_ptr<const TrieNode>(std::move(temp_));
+      curr = std::shared_ptr<TrieNode>(std::move(temp_));
+      parent->children_[key[i]] = curr;
     }
   }
   auto newchild = std::make_shared<const TrieNode>(curr->children_);
@@ -85,7 +86,7 @@ auto Trie::Remove(std::string_view key) const -> Trie {
       parent->children_[key.back()] = newchild;
     }
     else{
-      parent->children_[key.back()] = nullptr;
+      parent->children_.erase(key.back());
     }
     return Trie(newroot);
   }
