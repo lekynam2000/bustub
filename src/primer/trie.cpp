@@ -11,8 +11,7 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // nullptr. After you find the node, you should use `dynamic_cast` to cast it to `const TrieNodeWithValue<T> *`. If
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
-
-  std::shared_ptr<TrieNode> curr = root_->Clone() ;
+  std::shared_ptr<TrieNode> curr = this->root_->Clone() ;
   int len = static_cast<int>(key.size());
   for(int i=0;i<len;i++){
     curr = this->GetOne(curr, key[i]);
@@ -43,21 +42,28 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     else{
       auto temp_ = curr->Clone();
       parent->children_[key[i]] = std::shared_ptr<TrieNode>(std::move(temp_));
+      curr = parent->children_[key[i]];
     }
-    std::cout<<key[i]<<"\n";
+    // std::cout<<key[i]<<"\n";
   }
 
   //create new curr with old curr children and parent but with new value
-  std::cout<<"back"<<key.back()<<"\n";
+  // std::cout<<"back"<<key.back()<<"\n";
   auto newcurr = std::make_shared<const TrieNodeWithValue<T>>(curr->children_, std::make_shared<T>(std::move(value)));
-  parent->children_[key.back()] = newcurr;
-  return Trie(newroot);
+  if(parent!=nullptr){
+    parent->children_[key.back()] = newcurr;
+    auto newTrie = Trie(newroot);
+    // auto debugVar = *newTrie.Get<T>(key);
+    return newTrie;
+  }
+  return Trie(newcurr);
+  
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should create a new `TrieNodeWithValue`.
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
-  auto temp_ = root_->Clone();
+  auto temp_ = this->root_->Clone();
   std::shared_ptr<TrieNode> newroot = std::shared_ptr<TrieNode>(std::move(temp_)); 
   std::shared_ptr<TrieNode> parent = nullptr, curr=newroot;
   int i=0;
@@ -74,13 +80,16 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     }
   }
   auto newchild = std::make_shared<const TrieNode>(curr->children_);
-  if(!newchild->children_.empty()){
-    parent->children_[key.back()] = newchild;
+  if(parent!=nullptr){
+    if(!newchild->children_.empty()){
+      parent->children_[key.back()] = newchild;
+    }
+    else{
+      parent->children_[key.back()] = nullptr;
+    }
+    return Trie(newroot);
   }
-  else{
-    parent->children_[key.back()] = nullptr;
-  }
-  return Trie(newroot);
+  return Trie(newchild);
 
   // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
