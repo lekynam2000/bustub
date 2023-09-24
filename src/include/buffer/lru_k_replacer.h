@@ -30,10 +30,23 @@ class LRUKNode {
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
   // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
+  std::list<size_t> history_;
+  size_t k_;
+  [[maybe_unused]]frame_id_t fid_;
+  
+  public:
+  bool is_evictable{false};
+  LRUKNode(){}
+  explicit LRUKNode(size_t k):k_{k}{}
+  
+  bool saveHistory(size_t timestamp){
+    history_.push_front(timestamp);
+    if(history_.size()>k_){
+      history_.pop_back();
+      BUSTUB_ASSERT(history_.size(),k_);
+    }
+    return history_.size()==k_;
+  }
 };
 
 /**
@@ -150,12 +163,18 @@ class LRUKReplacer {
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  size_t current_timestamp_{0};
+  size_t curr_size_{0};
+  size_t replacer_size_;
+  size_t k_;
+  std::mutex latch_;
+
+  std::unordered_map<frame_id_t,std::list<frame_id_t>::iterator> mapRecentKth_;
+  std::list<frame_id_t> listRecentKth_;
+  std::list<frame_id_t>::iterator endInfIt_ = listRecentKth_.end();
+
+
 };
 
 }  // namespace bustub
