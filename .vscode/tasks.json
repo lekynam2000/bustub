@@ -5,14 +5,17 @@
             "label": "buildTest",
             "type": "shell",
             "command": "make",
-            "args": ["${fileBasenameNoExtension}","-j$(nproc)"],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "args": [
+                "${fileBasenameNoExtension}",
+                "-j$(nproc)"
+            ],
+            "group": "build",
             "problemMatcher": {
                 "owner": "cpp",
-                "fileLocation": ["relative", "${workspaceFolder}"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}"
+                ],
                 "pattern": {
                     "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
                     "file": 1,
@@ -22,9 +25,10 @@
                     "message": 5
                 }
             },
-            "options":{
+            "options": {
                 "cwd": "${workspaceFolder}/build"
             }
-        }
+        },
+        
     ]
 }

@@ -47,6 +47,7 @@ class LRUKNode {
     }
     return history_.size()==k_;
   }
+  ~LRUKNode()=default;
 };
 
 /**

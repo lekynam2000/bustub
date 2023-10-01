@@ -18,7 +18,7 @@ namespace bustub {
 LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool { 
-    std::lock_guard<std::mutex> lock(latch_);
+    // std::lock_guard<std::mutex> lock(latch_);
     auto toRemoveIt = listRecentKth_.begin();
     while(toRemoveIt!=listRecentKth_.end() && !node_store_[*toRemoveIt].is_evictable){
       toRemoveIt++;
@@ -47,15 +47,24 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
       listRecentKth_.push_back(frame_id);
       mapRecentKth_[frame_id]=std::prev(listRecentKth_.end());
     }
-    if(node_store_[frame_id].saveHistory(current_timestamp_)&& mapRecentKth_[frame_id]!=listRecentKth_.end()){
-      //End of inf iterator shift to the next if the current one need to move
-      if(mapRecentKth_[frame_id]==endInfIt_ ){
-        endInfIt_ = std::next(endInfIt_);
+    if(node_store_[frame_id].saveHistory(current_timestamp_)){
+      if(std::next(mapRecentKth_[frame_id])!=listRecentKth_.end())
+      {        
+        //End of inf iterator shift to the next if the current one need to move
+        if(mapRecentKth_[frame_id]==endInfIt_ ){
+          endInfIt_ = std::next(endInfIt_);
+        }
+        
+        //If newest node got k historical access, put to the end
+        if(std::next(mapRecentKth_[frame_id])!=listRecentKth_.end())
+        listRecentKth_.splice(listRecentKth_.end(), listRecentKth_, mapRecentKth_[frame_id]);
+        if(endInfIt_==listRecentKth_.end()){
+          endInfIt_ = mapRecentKth_[frame_id];
+        }
       }
-      //If newest node got k historical access, put to the end
-      listRecentKth_.splice(listRecentKth_.end(), listRecentKth_, mapRecentKth_[frame_id]);
     }
     else{
+      if(std::next(mapRecentKth_[frame_id])!=endInfIt_)
       listRecentKth_.splice(endInfIt_, listRecentKth_, mapRecentKth_[frame_id]);
     }
 }
