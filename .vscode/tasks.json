@@ -28,7 +28,6 @@
             "options": {
                 "cwd": "${workspaceFolder}/build"
             }
-        },
-        
+        }
     ]
 }
