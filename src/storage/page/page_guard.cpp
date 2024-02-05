@@ -33,13 +33,35 @@ BasicPageGuard::~BasicPageGuard()
     this->Drop();
 };  // NOLINT
 
-ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept = default;
+BasicPageGuard::UpgradeRead(){
+    return ReadPageGuard(this->bpm_, this->page_)
+}
 
-auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & { return *this; }
+BasicPageGuard::UpgradeWrite(){
+    return WritePageGuard(this->bpm_, this->page_)
+}
 
-void ReadPageGuard::Drop() {}
+ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept
+{
+    this->guard_ = that->guard_;
+}
 
-ReadPageGuard::~ReadPageGuard() {}  // NOLINT
+auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & 
+{ 
+    this->guard_ = that->guard_;
+    return *this; 
+}
+
+void ReadPageGuard::Drop() 
+{
+    this->guard_.page_.WLatch();
+    this->guard_.Drop();
+}
+
+ReadPageGuard::~ReadPageGuard() 
+{
+    this->Drop();
+}  // NOLINT
 
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept = default;
 
