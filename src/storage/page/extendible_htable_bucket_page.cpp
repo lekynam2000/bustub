@@ -19,13 +19,30 @@
 namespace bustub {
 
 template <typename K, typename V, typename KC>
-void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
-  throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
+void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size): max_size(max_size)
+{
 }
 
 template <typename K, typename V, typename KC>
-auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool {
-  return false;
+auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp) -> uint32_t 
+{
+  uint32_t left=0,right=size_,mid;
+  while(left<right){
+    mid = left+(right-left)/2;
+    cr = cmp(array_[mid].first, key);
+    if(cr==0) return true;
+    if(cr==-1){
+      left = mid+1;
+    }else{
+      right = mid-1;
+    }
+  }
+  return max_size_;
+}
+
+template <typename K, typename V, typename KC>
+auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool 
+{
 }
 
 template <typename K, typename V, typename KC>

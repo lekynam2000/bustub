@@ -3,8 +3,9 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "/home/namle/learn/bustub/**"
             ],
+            "compilerPath": "/usr/bin/clang++-14",
             "defines": [],
             "cStandard": "c17",
             "cppStandard": "c++17",
