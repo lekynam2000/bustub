@@ -30,24 +30,37 @@ auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp
   while(left<right){
     mid = left+(right-left)/2;
     cr = cmp(array_[mid].first, key);
-    if(cr==0) return true;
     if(cr==-1){
       left = mid+1;
-    }else{
-      right = mid-1;
+    }
+    else{
+      right = mid;
     }
   }
-  return max_size_;
+  return left;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool 
 {
+    uint_32 idx = BinSearch(key, value, cmp);
+    if(cmp(array_[idx].first,key)==0) return true;
+    return false; 
 }
 
 template <typename K, typename V, typename KC>
-auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool {
-  return false;
+auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool 
+{
+  if(IsFull()) return false;
+  uint_32 idx = BinSearch(key, value, cmp);
+  if(cmp(array_[idx].first,key)==0) return false;
+  //TODO: move later part
+  for(int i=idx;i<size_;i++){
+    array_[i+1] = array_[i];
+  }
+  size_++;
+  array_[idx] = std::make_pair(key, value);
+  return true;
 }
 
 template <typename K, typename V, typename KC>
@@ -82,12 +95,12 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Size() const -> uint32_t {
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::IsFull() const -> bool {
-  return false;
+  return size_==max_size_;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::IsEmpty() const -> bool {
-  return false;
+  return size_==0;
 }
 
 template class ExtendibleHTableBucketPage<int, int, IntComparator>;
