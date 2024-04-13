@@ -65,22 +65,31 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -> bool {
-  return false;
+  uint_32 idx = BinSearch(key, value, cmp);
+  if(cmp(array_[idx].first,key)!=0) return false;
+  for(int i=idx;i<size_;i++){
+    array_[i]=array_[i+1];
+  }   
+  size_--;
+  return true;
 }
 
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
-  throw NotImplementedException("ExtendibleHTableBucketPage not implemented");
+  for(int i=bucket_idx;i<size_;i++){
+    array_[i]=array_[i+1];
+  }   
+  size_--;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::KeyAt(uint32_t bucket_idx) const -> K {
-  return {};
+  return array_[bucket_idx].first;
 }
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const -> V {
-  return {};
+  return array_[bucket_idx].second;
 }
 
 template <typename K, typename V, typename KC>
@@ -90,7 +99,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::EntryAt(uint32_t bucket_idx) const ->
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Size() const -> uint32_t {
-  return 0;
+  return size_;
 }
 
 template <typename K, typename V, typename KC>
