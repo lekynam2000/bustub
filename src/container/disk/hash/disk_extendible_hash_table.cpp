@@ -40,8 +40,9 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
       hash_fn_(std::move(hash_fn)),
       header_max_depth_(header_max_depth),
       directory_max_depth_(directory_max_depth),
-      bucket_max_size_(bucket_max_size) {
-  throw NotImplementedException("DiskExtendibleHashTable is not implemented");
+      bucket_max_size_(bucket_max_size) 
+      {
+  page_id 
 }
 
 /*****************************************************************************

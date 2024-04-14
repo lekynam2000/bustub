@@ -94,7 +94,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::ValueAt(uint32_t bucket_idx) const ->
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::EntryAt(uint32_t bucket_idx) const -> const std::pair<K, V> & {
-  return array_[0];
+  return array_[bucket_idx];
 }
 
 template <typename K, typename V, typename KC>

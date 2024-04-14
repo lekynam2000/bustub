@@ -20,7 +20,7 @@ void ExtendibleHTableHeaderPage::Init(uint32_t max_depth): max_depth(max_depth) 
 
 auto ExtendibleHTableHeaderPage::HashToDirectoryIndex(uint32_t hash) const -> uint32_t 
 {
-  return hash>>(32-max_depth); 
+  return hash&((1<<max_depth_)-1); 
 }
 
 auto ExtendibleHTableHeaderPage::GetDirectoryPageId(uint32_t directory_idx) const -> page_id_t 
@@ -35,7 +35,7 @@ void ExtendibleHTableHeaderPage::SetDirectoryPageId(uint32_t directory_idx, page
 
 auto ExtendibleHTableHeaderPage::MaxSize() const -> uint32_t 
 { 
-  return (1<<max_depth); 
+  return (1<<max_depth_); 
 }
 
 }  // namespace bustub

@@ -44,15 +44,15 @@ class DiskExtendibleHashTable {
    * @param bpm buffer pool manager to be used
    * @param cmp comparator for keys
    * @param hash_fn the hash function
-   * @param header_max_depth the max depth allowed for the header page
+   * @param header_max_depth the max depth  bucket_max_size = HTableBucketArraySize(sizeof(std::pair<K, V>)));
+allowed for the header page
    * @param directory_max_depth the max depth allowed for the directory page
    * @param bucket_max_size the max size allowed for the bucket page array
    */
   explicit DiskExtendibleHashTable(const std::string &name, BufferPoolManager *bpm, const KC &cmp,
                                    const HashFunction<K> &hash_fn, uint32_t header_max_depth = HTABLE_HEADER_MAX_DEPTH,
                                    uint32_t directory_max_depth = HTABLE_DIRECTORY_MAX_DEPTH,
-                                   uint32_t bucket_max_size = HTableBucketArraySize(sizeof(std::pair<K, V>)));
-
+                                   uint32_t
   /** TODO(P2): Add implementation
    * Inserts a key-value pair into the hash table.
    *
