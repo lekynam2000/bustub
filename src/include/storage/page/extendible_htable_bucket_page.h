@@ -58,6 +58,8 @@ class ExtendibleHTableBucketPage {
    */
   void Init(uint32_t max_size = HTableBucketArraySize(sizeof(MappingType)));
 
+  auto BinSearch(const KeyType &key, const KeyComparator &cmp) const -> uint32_t;
+
   /**
    * Lookup a key
    *

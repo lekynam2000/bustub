@@ -19,17 +19,18 @@
 namespace bustub {
 
 template <typename K, typename V, typename KC>
-void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size): max_size(max_size)
+void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size)
 {
+  max_size_ = max_size;
 }
 
 template <typename K, typename V, typename KC>
-auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp) -> uint32_t 
+auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp) const -> uint32_t 
 {
   uint32_t left=0,right=size_,mid;
   while(left<right){
     mid = left+(right-left)/2;
-    cr = cmp(array_[mid].first, key);
+    int cr = cmp(array_[mid].first, key);
     if(cr==-1){
       left = mid+1;
     }
@@ -43,8 +44,8 @@ auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool 
 {
-    uint_32 idx = BinSearch(key, value, cmp);
-    if(cmp(array_[idx].first,key)==0) return true;
+    uint32_t idx = BinSearch(key, cmp);
+    if(cmp(array_[idx].first, key)==0) return true;
     return false; 
 }
 
@@ -52,10 +53,10 @@ template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool 
 {
   if(IsFull()) return false;
-  uint_32 idx = BinSearch(key, value, cmp);
+  uint32_t idx = BinSearch(key, cmp);
   if(cmp(array_[idx].first,key)==0) return false;
   //TODO: move later part
-  for(int i=idx;i<size_;i++){
+  for(uint32_t i=idx;i<size_;i++){
     array_[i+1] = array_[i];
   }
   size_++;
@@ -65,9 +66,9 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -> bool {
-  uint_32 idx = BinSearch(key, value, cmp);
+  uint32_t idx = BinSearch(key, cmp);
   if(cmp(array_[idx].first,key)!=0) return false;
-  for(int i=idx;i<size_;i++){
+  for(uint32_t i=idx; i<size_; i++){
     array_[i]=array_[i+1];
   }   
   size_--;
@@ -76,7 +77,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -
 
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::RemoveAt(uint32_t bucket_idx) {
-  for(int i=bucket_idx;i<size_;i++){
+  for(size_t i=bucket_idx;i<size_;i++){
     array_[i]=array_[i+1];
   }   
   size_--;

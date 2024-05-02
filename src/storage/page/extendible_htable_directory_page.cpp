@@ -20,8 +20,12 @@
 
 namespace bustub {
 
-void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth): max_depth(max_depth) 
+void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth) 
 {
+  max_depth_ = max_depth;
+  for(size_t i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
+    bucket_page_ids_[i]=0;
+  }
 }
 
 auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t 
@@ -36,7 +40,7 @@ auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -
 
 void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id_t bucket_page_id) 
 {
-  bucket_page_ids[bucket_idx] = bucket_page_id;
+  bucket_page_ids_[bucket_idx] = bucket_page_id;
 }
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t 
@@ -61,7 +65,7 @@ void ExtendibleHTableDirectoryPage::DecrGlobalDepth()
 
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool 
 { 
-  for(int i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
+  for(size_t i=0; i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
     if(local_depths_[i]>=max_depth_){
       return false;
     }
@@ -72,8 +76,8 @@ auto ExtendibleHTableDirectoryPage::CanShrink() -> bool
 auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t 
 { 
   uint32_t sum=0;
-  for(int i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
-    if(local_depths_[i]>0 && !(i<<local_depths_[i])){
+  for(size_t i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
+    if(local_depths_[i]>0){
       sum+=1;
     }
   } 

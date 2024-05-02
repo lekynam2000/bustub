@@ -42,7 +42,11 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
       directory_max_depth_(directory_max_depth),
       bucket_max_size_(bucket_max_size) 
       {
-  page_id 
+    BasicPageGuard header_page_guard = bpm_->NewPageGuarded(&header_page_id_);
+    WritePageGuard header_page_guard_write = header_page_guard.UpgradeWrite();
+  //  Init header page
+    ExtendibleHTableHeaderPage* header_page_data = header_page_guard_write.AsMut<ExtendibleHTableHeaderPage>();
+    header_page_data->Init(header_max_depth);
 }
 
 /*****************************************************************************
@@ -51,7 +55,16 @@ DiskExtendibleHashTable<K, V, KC>::DiskExtendibleHashTable(const std::string &na
 template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *result, Transaction *transaction) const
     -> bool {
-  return false;
+    uint32_t hash = Hash(key);
+    const ExtendibleHTableHeaderPage* header_page = bpm_->FetchPageRead(header_page_id_).As<ExtendibleHTableHeaderPage>();
+    uint32_t dir_ind = header_page->HashToDirectoryIndex(hash);
+    uint32_t dir_page_id_ = header_page->GetDirectoryPageId(dir_ind);
+    if(dir_page_id_==0) return false;
+    const ExtendibleHTableDirectoryPage* dir_page = bpm_->FetchPageRead(dir_page_id_).As<ExtendibleHTableDirectoryPage>();
+    uint32_t buc_ind = dir_page->HashToBucketIndex(hash);
+    uint32_t buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
+    const ExtendibleHTableBucketPage<K, V, KC> * buc_page = bpm_->FetchPageRead(buc_page_id_).As<ExtendibleHTableBucketPage<K, V, KC>>();
+    return buc_page->Lookup(key, *(result->data()), cmp_);
 }
 
 /*****************************************************************************

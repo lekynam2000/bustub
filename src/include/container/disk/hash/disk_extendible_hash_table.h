@@ -52,7 +52,7 @@ allowed for the header page
   explicit DiskExtendibleHashTable(const std::string &name, BufferPoolManager *bpm, const KC &cmp,
                                    const HashFunction<K> &hash_fn, uint32_t header_max_depth = HTABLE_HEADER_MAX_DEPTH,
                                    uint32_t directory_max_depth = HTABLE_DIRECTORY_MAX_DEPTH,
-                                   uint32_t
+                                   uint32_t bucket_max_size = HTableBucketArraySize(sizeof(std::pair<K, V>)));
   /** TODO(P2): Add implementation
    * Inserts a key-value pair into the hash table.
    *
