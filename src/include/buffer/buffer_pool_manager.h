@@ -112,7 +112,7 @@ class BufferPoolManager {
    * Functionality should be the same as FetchPage, except
    * that, depending on the function called, a guard is returned.
    * If FetchPageRead or FetchPageWrite is called, it is expected that
-   * the returned page already has a read or write latch held, respectively.
+   * the returned page already has a readconst or write latch held, respectively.
    *
    * @param page_id, the id of the page to fetch
    * @return PageGuard holding the fetched page
