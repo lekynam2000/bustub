@@ -30,7 +30,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth)
 
 auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t 
 { 
-  return hash<<((1<<global_depth_)-1);
+  return hash&&((1<<global_depth_)-1);
 }
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t 
@@ -45,7 +45,8 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
 
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t 
 { 
-   return bucket_idx+1;
+   uint32_t mask = (1<<(global_depth_+1));
+   return bucket_idx^mask;
 }
 
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t 
@@ -54,18 +55,26 @@ auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t
 }
 
 void ExtendibleHTableDirectoryPage::IncrGlobalDepth() 
-{
+{ 
+  for(size_t i=0;i<Size();i++){
+    bucket_page_ids_[GetSplitImageIndex(i)] = bucket_page_ids_[i];
+    local_depths_[GetSplitImageIndex(i)] = local_depths_[i];
+  }
   global_depth_+=1;
 }
 
 void ExtendibleHTableDirectoryPage::DecrGlobalDepth() 
 {
   global_depth_-=1;
+  for(size_t i=0;i<Size();i++){
+    bucket_page_ids_[GetSplitImageIndex(i)] = 0;
+    local_depths_[GetSplitImageIndex(i)] = 0;
+  }
 }
 
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool 
 { 
-  for(size_t i=0; i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
+  for(size_t i=0; i<Size();i++){
     if(local_depths_[i]>=max_depth_){
       return false;
     }
@@ -75,13 +84,7 @@ auto ExtendibleHTableDirectoryPage::CanShrink() -> bool
 
 auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t 
 { 
-  uint32_t sum=0;
-  for(size_t i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
-    if(local_depths_[i]>0){
-      sum+=1;
-    }
-  } 
-  return sum;
+  return static_cast<uint32_t>(1)<<global_depth_;
 }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) const -> uint32_t 

@@ -55,7 +55,6 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
   if(IsFull()) return false;
   uint32_t idx = BinSearch(key, cmp);
   if(cmp(array_[idx].first,key)==0) return false;
-  //TODO: move later part
   for(uint32_t i=idx;i<size_;i++){
     array_[i+1] = array_[i];
   }

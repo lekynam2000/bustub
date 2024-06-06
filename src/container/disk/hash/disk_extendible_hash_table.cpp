@@ -73,6 +73,25 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
 
 template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Transaction *transaction) -> bool {
+  uint32_t hash = Hash(key);
+  ExtendibleHTableHeaderPage* header_page = bpm_->FetchPageWrite(header_page_id_).AsMut<ExtendibleHTableHeaderPage>();
+  uint32_t directory_idx = header_page->HashToDirectoryIndex(hash);
+  page_id_t dir_page_id_ = header_page->GetDirectoryPageId(directory_idx);
+  if(dir_page_id_==0){
+    return InsertToNewDirectory(header_page, directory_idx, hash, key, value);
+  }
+  ExtendibleHTableDirectoryPage* dir_page = bpm_->FetchPageWrite(dir_page_id_).AsMut<ExtendibleHTableDirectoryPage>();
+  uint32_t buc_ind = dir_page->HashToBucketIndex(hash);
+  uint32_t buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
+  if(buc_page_id_==0){
+    InsertToNewBucket(dir_page, buc_ind, key, value);
+  }
+  ExtendibleHTableBucketPage<K, V, KC> * buc_page = bpm_->FetchPageWrite(buc_page_id_).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  while(buc_page->IsFull())
+  {
+    dir_page->IncrLocalDepth(buc_ind);
+    
+  }
   return false;
 }
 
@@ -91,12 +110,35 @@ auto DiskExtendibleHashTable<K, V, KC>::InsertToNewDirectory(ExtendibleHTableHea
 template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::InsertToNewBucket(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx,
                                                           const K &key, const V &value) -> bool {
-  page_id_t bucket_page_id_;
-  BasicPageGuard bucket_page_guard = bpm_->NewPageGuarded(&bucket_page_id_);
+  page_id_t* bucket_page_id_=nullptr;
+  BasicPageGuard bucket_page_guard = bpm_->NewPageGuarded(bucket_page_id_);
   if(bucket_page_id_==nullptr) return false;
   directory->SetBucketPageId(bucket_idx, *bucket_page_id_);
   ExtendibleHTableBucketPage<K, V, KC> * buc_page = bucket_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   buc_page->Insert(key, value, cmp_);
+  return true;
+}
+
+template <typename K, typename V, typename KC>
+auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx) -> bool{
+  ExtendibleHTableBucketPage<K, V, KC> * old_buc_page = bpm_->FetchPageWrite(directory->GetBucketPageId(bucket_idx)).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();  
+
+  uint32_t ld = directory->GetLocalDepth(bucket_idx);
+  page_id_t * buc1_page_id=nullptr;
+  page_id_t * buc2_page_id=nullptr;
+  
+  BasicPageGuard buc1_page_guard = bpm_->NewPageGuarded(buc1_page_id);
+  BasicPageGuard buc2_page_guard = bpm_->NewPageGuarded(buc2_page_id);
+  if((buc1_page_id == nullptr) || (buc2_page_id == nullptr)) return false;
+  
+  ExtendibleHTableBucketPage<K, V, KC> * buc1_page = buc1_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  ExtendibleHTableBucketPage<K, V, KC> * buc2_page = buc2_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  
+  for(size_t i=0;i<old_buc_page->Size();i++){
+    // TODO: Get things from old and put to new 1 and new 2
+    
+  }
+
   return true;
 }
 
