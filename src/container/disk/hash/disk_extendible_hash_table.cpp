@@ -90,8 +90,15 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
   while(buc_page->IsFull())
   {
     dir_page->IncrLocalDepth(buc_ind);
-    
+    bpm_->UnpinPage(buc_page, true);
+    buc_ind = dir_page->HashToBucketIndex(hash);
+    buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
+    if(buc_page_id_==0){
+      InsertToNewBucket(dir_page, buc_ind, key, value);
+      }
+    buc_page = bpm_->FetchPageWrite(buc_page_id_).AsMut<ExtendibleHTableBucketPage<K, V, KC>>(); 
   }
+  buc_page->Insert(key, value, cmp_);
   return false;
 }
 
@@ -134,9 +141,10 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
   ExtendibleHTableBucketPage<K, V, KC> * buc1_page = buc1_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   ExtendibleHTableBucketPage<K, V, KC> * buc2_page = buc2_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   
-  for(size_t i=0;i<old_buc_page->Size();i++){
+  for(size_t idx=0;idx<old_buc_page->Size();idx++){
     // TODO: Get things from old and put to new 1 and new 2
-    
+    auto [key, value] = old_buc_page->EntryAt(idx);
+
   }
 
   return true;
