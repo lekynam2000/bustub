@@ -95,11 +95,12 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
     buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
     if(buc_page_id_==0){
       InsertToNewBucket(dir_page, buc_ind, key, value);
+      break;
       }
     buc_page = bpm_->FetchPageWrite(buc_page_id_).AsMut<ExtendibleHTableBucketPage<K, V, KC>>(); 
   }
   buc_page->Insert(key, value, cmp_);
-  return false;
+  return true;
 }
 
 template <typename K, typename V, typename KC>
@@ -131,22 +132,33 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
   ExtendibleHTableBucketPage<K, V, KC> * old_buc_page = bpm_->FetchPageWrite(directory->GetBucketPageId(bucket_idx)).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();  
 
   uint32_t ld = directory->GetLocalDepth(bucket_idx);
-  page_id_t * buc1_page_id=nullptr;
-  page_id_t * buc2_page_id=nullptr;
+  uint32_t mask = 1<<(ld+1);
+  page_id_t old_page_id = directory->GetBucketPageId(bucket_idx);
+  page_id_t * buc1_page_id_ptr = nullptr;
+  page_id_t * buc2_page_id_ptr = nullptr;
   
-  BasicPageGuard buc1_page_guard = bpm_->NewPageGuarded(buc1_page_id);
-  BasicPageGuard buc2_page_guard = bpm_->NewPageGuarded(buc2_page_id);
-  if((buc1_page_id == nullptr) || (buc2_page_id == nullptr)) return false;
+  BasicPageGuard buc1_page_guard = bpm_->NewPageGuarded(buc1_page_id_ptr);
+  BasicPageGuard buc2_page_guard = bpm_->NewPageGuarded(buc2_page_id_ptr);
+  if((buc1_page_id_ptr == nullptr) || (buc2_page_id_ptr == nullptr)) return false;
   
   ExtendibleHTableBucketPage<K, V, KC> * buc1_page = buc1_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   ExtendibleHTableBucketPage<K, V, KC> * buc2_page = buc2_page_guard.UpgradeWrite().AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
-  
-  for(size_t idx=0;idx<old_buc_page->Size();idx++){
-    // TODO: Get things from old and put to new 1 and new 2
-    auto [key, value] = old_buc_page->EntryAt(idx);
 
+  // Redistribute data
+  for(size_t idx=0; idx<old_buc_page->Size(); idx++){
+    auto [key, value] = old_buc_page->EntryAt(idx);
+    uint32_t hash = Hash(key);
+    if(hash & mask) buc2_page->Insert(key, value, cmp_);
+    else buc1_page->Insert(key, value, cmp_);
   }
 
+  //Redistribute page pointer
+  for(size_t idx=0; idx<directory->Size(); idx++){
+    if(directory->bucket_page_ids_[idx]==old_page_id){
+      if(idx & mask) directory->bucket_page_ids_[idx] = *buc2_page_id_ptr;
+      else directory->bucket_page_ids_[idx] = *buc1_page_id_ptr;
+    }
+  }
   return true;
 }
 
