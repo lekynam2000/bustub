@@ -128,7 +128,8 @@ auto DiskExtendibleHashTable<K, V, KC>::InsertToNewBucket(ExtendibleHTableDirect
 }
 
 template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx) -> bool{
+auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx) -> bool
+{
   ExtendibleHTableBucketPage<K, V, KC> * old_buc_page = bpm_->FetchPageWrite(directory->GetBucketPageId(bucket_idx)).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();  
 
   uint32_t ld = directory->GetLocalDepth(bucket_idx);
@@ -155,6 +156,7 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
   //Redistribute page pointer
   for(size_t idx=0; idx<directory->Size(); idx++){
     if(directory->bucket_page_ids_[idx]==old_page_id){
+      directory->IncrLocalDepth(idx);
       if(idx & mask) directory->bucket_page_ids_[idx] = *buc2_page_id_ptr;
       else directory->bucket_page_ids_[idx] = *buc1_page_id_ptr;
     }
@@ -173,10 +175,59 @@ void DiskExtendibleHashTable<K, V, KC>::UpdateDirectoryMapping(ExtendibleHTableD
  * REMOVE
  *****************************************************************************/
 template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transaction) -> bool {
-  return false;
+auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transaction) -> bool 
+{
+  int32_t hash = Hash(key);
+  ExtendibleHTableHeaderPage* header_page = bpm_->FetchPageWrite(header_page_id_).AsMut<ExtendibleHTableHeaderPage>();
+  uint32_t directory_idx = header_page->HashToDirectoryIndex(hash);
+  page_id_t dir_page_id_ = header_page->GetDirectoryPageId(directory_idx);
+  if(dir_page_id_==0){
+    return false;
+  }
+  ExtendibleHTableDirectoryPage* dir_page = bpm_->FetchPageWrite(dir_page_id_).AsMut<ExtendibleHTableDirectoryPage>();
+  uint32_t bucket_idx = dir_page->HashToBucketIndex(hash);
+  uint32_t buc_page_id_ = dir_page->GetBucketPageId(bucket_idx);
+  if(buc_page_id_==0){
+    return false;
+  }
+  ExtendibleHTableBucketPage<K, V, KC> * buc_page = bpm_->FetchPageWrite(buc_page_id_).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  if(!buc_page->Remove(key, cmp_)) return false;
+  while(buc_page->IsEmpty()){
+    uint32_t ld = dir_page->GetLocalDepth(bucket_idx);
+    uint32_t new_buc_idx = bucket_idx ^ (1<<ld);
+    if(ld == dir_page->GetLocalDepth(new_buc_idx))
+    {
+      uint32_t new_page_id = dir_page->GetBucketPageId(new_buc_idx);
+      for(size_t idx=0; idx<dir_page->Size(); idx++){
+        if(dir_page->GetBucketPageId(idx)==buc_page_id_ || dir_page->GetBucketPageId(idx)==new_page_id){
+          dir_page->SetBucketPageId(idx, new_page_id);
+          dir_page->DecrLocalDepth(idx);
+1        }
+      }
+      
+      bucket_idx = new_buc_idx;
+      buc_page = bpm_->FetchPageWrite(new_page_id_).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+    }
+    else{
+      break;
+    }
+      
+  }
+  return true;
 }
 
+template <typename K, typename V, typename KC>
+auto DiskExtendibleHashTable<K, V, KC>::DecrLocalDepth(
+  ExtendibleHTableDirectoryPage *directory, 
+  ExtendibleHTableBucketPage<K, V, KC> *buc1_page, 
+  uint32_t buc1_idx) -> uint32_t
+{
+  uint32_t ld = directory->GetLocalDepth(bucket_idx);
+  uint32_t buc2_idx = buc1_idx ^ (1<<(ld+1));
+  uint32_t buc2_page_id = directory->GetBucketPageId(buc2_idx);
+  TableBucketPage<K, V, KC> * buc2_page = bpm_->FetchPageWrite(buc2_page_id).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
+  
+}
 template class DiskExtendibleHashTable<int, int, IntComparator>;
 template class DiskExtendibleHashTable<GenericKey<4>, RID, GenericComparator<4>>;
 template class DiskExtendibleHashTable<GenericKey<8>, RID, GenericComparator<8>>;

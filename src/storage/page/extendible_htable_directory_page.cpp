@@ -86,7 +86,7 @@ void ExtendibleHTableDirectoryPage::DecrGlobalDepth()
 auto ExtendibleHTableDirectoryPage::CanShrink() -> bool 
 { 
   for(size_t i=0; i<Size();i++){
-    if(local_depths_[i]>=max_depth_){
+    if(local_depths_[i]>=global_depth_){
       return false;
     }
   }

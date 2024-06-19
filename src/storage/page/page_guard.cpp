@@ -74,6 +74,7 @@ ReadPageGuard::~ReadPageGuard()
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept
 {
     this->guard_ = std::move(that.guard_);
+    this->guard_.is_dirty_ = true;
 }
 
 auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard & 
