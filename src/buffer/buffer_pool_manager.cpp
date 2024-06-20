@@ -103,6 +103,7 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   }
   
   auto inserted_frame = page_table_[page_id];
+  pages_[inserted_frame].pin_count_+=1;
   lock.unlock();
   return &pages_[inserted_frame];
   
