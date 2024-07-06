@@ -66,7 +66,7 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
     uint32_t dir_page_id_ = header_page->GetDirectoryPageId(dir_ind);
 
     // Drop the header page guard
-    header_guard->Drop();
+    header_guard.Drop();
 
     if (dir_page_id_ == 0) return false;
 
@@ -78,14 +78,14 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
     uint32_t buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
 
     // Drop the directory page guard
-    dir_guard->Drop();
+    dir_guard.Drop();
 
     // Fetch and use bucket page
     auto buc_guard = bpm_->FetchPageRead(buc_page_id_);
     const ExtendibleHTableBucketPage<K, V, KC>* buc_page = buc_guard.As<ExtendibleHTableBucketPage<K, V, KC>>();
 
     // Drop the bucket page guard
-    buc_guard->Drop();
+    buc_guard.Drop();
 
     return buc_page->Lookup(key, *(result->data()), cmp_);
   }
@@ -98,16 +98,16 @@ template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Transaction *transaction) -> bool 
 {
   uint32_t hash = Hash(key);
-  WritePageGuard header_guard = bpm_->FetchPageWrite(header_page_id_)
+  WritePageGuard header_guard = bpm_->FetchPageWrite(header_page_id_);
   ExtendibleHTableHeaderPage* header_page = header_guard.AsMut<ExtendibleHTableHeaderPage>();
   uint32_t directory_idx = header_page->HashToDirectoryIndex(hash);
   page_id_t dir_page_id_ = header_page->GetDirectoryPageId(directory_idx);
   if(dir_page_id_==0){
     return InsertToNewDirectory(header_page, directory_idx, hash, key, value);
   }
-  header_guard->Drop();
+  header_guard.Drop();
 
-  WritePageGuard dir_guard = bpm_->FetchPageWrite(dir_page_id_)
+  WritePageGuard dir_guard = bpm_->FetchPageWrite(dir_page_id_);
   ExtendibleHTableDirectoryPage* dir_page = dir_guard.AsMut<ExtendibleHTableDirectoryPage>();
   uint32_t buc_ind = dir_page->HashToBucketIndex(hash);
   uint32_t buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
@@ -119,13 +119,14 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
   while(buc_page->IsFull())
   {
     dir_page->IncrLocalDepth(buc_ind);
-    bpm_->UnpinPage(buc_page, true);
+    buc_guard.Drop();
     buc_ind = dir_page->HashToBucketIndex(hash);
     buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
     if(buc_page_id_==0){
       InsertToNewBucket(dir_page, buc_ind, key, value);
       break;
     }
+    buc_guard.Drop();
     buc_guard = bpm_->FetchPageWrite(buc_page_id_);
     buc_page = buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   }
@@ -189,10 +190,10 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
 
   //Redistribute page pointer
   for(size_t idx=0; idx<directory->Size(); idx++){
-    if(directory->bucket_page_ids_[idx]==old_page_id){
+    if(directory->GetBucketPageId(idx)==old_page_id){
       directory->IncrLocalDepth(idx);
-      if(idx & mask) directory->bucket_page_ids_[idx] = *buc2_page_id_ptr;
-      else directory->bucket_page_ids_[idx] = *buc1_page_id_ptr;
+      if(idx & mask) directory->SetBucketPageId(idx, *buc2_page_id_ptr);
+      else directory->SetBucketPageId(idx, *buc1_page_id_ptr);
     }
   }
   return true;
@@ -213,17 +214,17 @@ auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transa
 {
   int32_t hash = Hash(key);
   ReadPageGuard header_guard = bpm_->FetchPageRead(header_page_id_);
-  ExtendibleHTableHeaderPage* header_page = header_guard.As<ExtendibleHTableHeaderPage>();
+  const ExtendibleHTableHeaderPage* header_page = header_guard.As<ExtendibleHTableHeaderPage>();
   uint32_t directory_idx = header_page->HashToDirectoryIndex(hash);
   page_id_t dir_page_id_ = header_page->GetDirectoryPageId(directory_idx);
-  header_guard->Drop();
+  header_guard.Drop();
   if(dir_page_id_==0){
     return false;
   }
   WritePageGuard dir_guard = bpm_->FetchPageWrite(dir_page_id_);
   ExtendibleHTableDirectoryPage* dir_page = dir_guard.AsMut<ExtendibleHTableDirectoryPage>();
   uint32_t bucket_idx = dir_page->HashToBucketIndex(hash);
-  uint32_t buc_page_id_ = dir_page->GetBucketPageId(bucket_idx);
+  page_id_t buc_page_id_ = dir_page->GetBucketPageId(bucket_idx);
   if(buc_page_id_==0){
     return false;
   }
@@ -232,19 +233,21 @@ auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transa
   if(!buc_page->Remove(key, cmp_)) return false;
   while(buc_page->IsEmpty()){
     uint32_t ld = dir_page->GetLocalDepth(bucket_idx);
+    if(ld==0) break;
     uint32_t new_buc_idx = bucket_idx ^ (1<<ld);
     if(ld == dir_page->GetLocalDepth(new_buc_idx))
     {
-      uint32_t new_page_id = dir_page->GetBucketPageId(new_buc_idx);
+      page_id_t new_page_id = dir_page->GetBucketPageId(new_buc_idx);
       for(size_t idx=0; idx<dir_page->Size(); idx++){
         if(dir_page->GetBucketPageId(idx)==buc_page_id_ || dir_page->GetBucketPageId(idx)==new_page_id){
           dir_page->SetBucketPageId(idx, new_page_id);
           dir_page->DecrLocalDepth(idx);
-1        }
+        }
       }
       
       bucket_idx = new_buc_idx;
-      buc_guard = bpm_->FetchPageWrite(new_page_id_);
+      buc_guard.Drop();
+      buc_guard = bpm_->FetchPageWrite(new_page_id);
       buc_page = buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
     }
     else{
@@ -255,19 +258,6 @@ auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transa
   return true;
 }
 
-template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::DecrLocalDepth(
-  ExtendibleHTableDirectoryPage *directory, 
-  ExtendibleHTableBucketPage<K, V, KC> *buc1_page, 
-  uint32_t buc1_idx) -> uint32_t
-{
-  uint32_t ld = directory->GetLocalDepth(bucket_idx);
-  uint32_t buc2_idx = buc1_idx ^ (1<<(ld+1));
-  uint32_t buc2_page_id = directory->GetBucketPageId(buc2_idx);
-  WritePageGuard buc2_guard = bpm_->FetchPageWrite(buc2_page_id);
-  ExtendibleHTableBucketPage<K, V, KC> * buc2_page = buc2_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
-  
-}
 template class DiskExtendibleHashTable<int, int, IntComparator>;
 template class DiskExtendibleHashTable<GenericKey<4>, RID, GenericComparator<4>>;
 template class DiskExtendibleHashTable<GenericKey<8>, RID, GenericComparator<8>>;

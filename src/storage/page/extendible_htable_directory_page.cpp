@@ -49,14 +49,14 @@ auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) cons
    return bucket_idx^mask;
 }
 
-auto GetGlobalDepthMask() const -> uint32_t
+auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t
 {
   return (1<<(global_depth_+1))-1;
 }
 
-auto GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t
+auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t
 {
-  uint32_t ld = local_depths[bucket_idx];
+  uint32_t ld = local_depths_[bucket_idx];
   return (1<<(ld+1))-1;
 }
 
