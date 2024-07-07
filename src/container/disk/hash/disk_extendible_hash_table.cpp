@@ -86,8 +86,10 @@ auto DiskExtendibleHashTable<K, V, KC>::GetValue(const K &key, std::vector<V> *r
 
     // Drop the bucket page guard
     buc_guard.Drop();
-
-    return buc_page->Lookup(key, *(result->data()), cmp_);
+    V value;
+    if(!buc_page->Lookup(key, value, cmp_)) return false;
+    result->push_back(value);
+    return true;
   }
 
 /*****************************************************************************
@@ -112,7 +114,7 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
   uint32_t buc_ind = dir_page->HashToBucketIndex(hash);
   uint32_t buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
   if(buc_page_id_==0){
-    InsertToNewBucket(dir_page, buc_ind, key, value);
+    return InsertToNewBucket(dir_page, buc_ind, key, value);
     }
   WritePageGuard buc_guard = bpm_->FetchPageWrite(buc_page_id_); 
   ExtendibleHTableBucketPage<K, V, KC> * buc_page = buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
@@ -137,12 +139,13 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
 template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::InsertToNewDirectory(ExtendibleHTableHeaderPage *header, uint32_t directory_idx,
                                                              uint32_t hash, const K &key, const V &value) -> bool {
-  page_id_t* directory_page_id_= nullptr;
-  BasicPageGuard directory_page_guard = bpm_->NewPageGuarded(directory_page_id_);
-  if(directory_page_id_==nullptr) return false;
-  header->SetDirectoryPageId(directory_idx, *directory_page_id_);
+  page_id_t* directory_page_id_ptr= new page_id_t(0);
+  BasicPageGuard directory_page_guard = bpm_->NewPageGuarded(directory_page_id_ptr);
+  if(*directory_page_id_ptr==0) return false;
+  header->SetDirectoryPageId(directory_idx, *directory_page_id_ptr);
   WritePageGuard write_dir_guard = directory_page_guard.UpgradeWrite();
   ExtendibleHTableDirectoryPage * dir_page = write_dir_guard.AsMut<ExtendibleHTableDirectoryPage>();
+  dir_page->Init(directory_max_depth_);
   uint32_t bucket_idx = dir_page->HashToBucketIndex(hash);
   return InsertToNewBucket(dir_page, bucket_idx, key, value);
 }
@@ -151,14 +154,14 @@ template <typename K, typename V, typename KC>
 auto DiskExtendibleHashTable<K, V, KC>::InsertToNewBucket(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx,
                                                           const K &key, const V &value) -> bool 
   {
-  page_id_t* bucket_page_id_=nullptr;
-  BasicPageGuard bucket_page_guard = bpm_->NewPageGuarded(bucket_page_id_);
-  if(bucket_page_id_==nullptr) return false;
-  directory->SetBucketPageId(bucket_idx, *bucket_page_id_);
+  page_id_t* bucket_page_id_ptr = new page_id_t(0);
+  BasicPageGuard bucket_page_guard = bpm_->NewPageGuarded(bucket_page_id_ptr);
+  if(*bucket_page_id_ptr==0) return false;
+  directory->SetBucketPageId(bucket_idx, *bucket_page_id_ptr);
   WritePageGuard write_buc_guard = bucket_page_guard.UpgradeWrite();
   ExtendibleHTableBucketPage<K, V, KC> * buc_page = write_buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
-  buc_page->Insert(key, value, cmp_);
-  return true;
+  buc_page->Init(bucket_max_size_);
+  return buc_page->Insert(key, value, cmp_);
   }
 
 template <typename K, typename V, typename KC>
@@ -169,12 +172,12 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
   uint32_t ld = directory->GetLocalDepth(bucket_idx);
   uint32_t mask = 1<<(ld+1);
   page_id_t old_page_id = directory->GetBucketPageId(bucket_idx);
-  page_id_t * buc1_page_id_ptr = nullptr;
-  page_id_t * buc2_page_id_ptr = nullptr;
+  page_id_t * buc1_page_id_ptr = new page_id_t(0);
+  page_id_t * buc2_page_id_ptr = new page_id_t(0);
   
   BasicPageGuard buc1_page_guard = bpm_->NewPageGuarded(buc1_page_id_ptr);
   BasicPageGuard buc2_page_guard = bpm_->NewPageGuarded(buc2_page_id_ptr);
-  if((buc1_page_id_ptr == nullptr) || (buc2_page_id_ptr == nullptr)) return false;
+  if((*buc1_page_id_ptr == 0) || (*buc2_page_id_ptr == 0)) return false;
   WritePageGuard write_buc1_page_guard = buc1_page_guard.UpgradeWrite();
   WritePageGuard write_buc2_page_guard = buc2_page_guard.UpgradeWrite();
   ExtendibleHTableBucketPage<K, V, KC> * buc1_page = write_buc1_page_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();

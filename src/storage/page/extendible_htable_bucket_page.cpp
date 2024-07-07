@@ -45,7 +45,11 @@ template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool 
 {
     uint32_t idx = BinSearch(key, cmp);
-    if(cmp(array_[idx].first, key)==0) return true;
+    if(cmp(array_[idx].first, key)==0) 
+    {
+      value = ValueAt(idx);
+      return true;
+    }
     return false; 
 }
 
@@ -54,7 +58,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
 {
   if(IsFull()) return false;
   uint32_t idx = BinSearch(key, cmp);
-  if(cmp(array_[idx].first,key)==0) return false;
+  if((idx<size_) & (cmp(array_[idx].first,key)==0)) return false;
   for(uint32_t i=idx;i<size_;i++){
     array_[i+1] = array_[i];
   }
