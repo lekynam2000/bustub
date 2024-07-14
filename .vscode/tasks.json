@@ -4,10 +4,10 @@
         {
             "label": "buildTest",
             "type": "shell",
-            "command": "make",
+            "command": "bash",
             "args": [
-                "${fileBasenameNoExtension}",
-                "-j$(nproc)"
+                "-c",
+                "cmake -DCMAKE_BUILD_TYPE=Debug .. && make ${fileBasenameNoExtension} -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": {

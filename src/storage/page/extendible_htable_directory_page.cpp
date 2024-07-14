@@ -30,7 +30,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth)
 
 auto ExtendibleHTableDirectoryPage::HashToBucketIndex(uint32_t hash) const -> uint32_t 
 { 
-  return hash&&((1<<global_depth_)-1);
+  return (hash&&((1<<global_depth_)-1));
 }
 
 auto ExtendibleHTableDirectoryPage::GetBucketPageId(uint32_t bucket_idx) const -> page_id_t 
@@ -46,18 +46,18 @@ void ExtendibleHTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id
 auto ExtendibleHTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) const -> uint32_t 
 { 
    uint32_t mask = (1<<(global_depth_+1));
-   return bucket_idx^mask;
+   return (bucket_idx^mask);
 }
 
 auto ExtendibleHTableDirectoryPage::GetGlobalDepthMask() const -> uint32_t
 {
-  return (1<<(global_depth_+1))-1;
+  return ((1<<(global_depth_+1))-1);
 }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const -> uint32_t
 {
   uint32_t ld = local_depths_[bucket_idx];
-  return (1<<(ld+1))-1;
+  return ((1<<(ld+1))-1);
 }
 
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t 
@@ -95,7 +95,7 @@ auto ExtendibleHTableDirectoryPage::CanShrink() -> bool
 
 auto ExtendibleHTableDirectoryPage::Size() const -> uint32_t 
 { 
-  return static_cast<uint32_t>(1)<<global_depth_;
+  return (static_cast<uint32_t>(1)<<global_depth_);
 }
 
 auto ExtendibleHTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) const -> uint32_t 
