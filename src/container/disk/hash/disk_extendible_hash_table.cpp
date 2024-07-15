@@ -120,15 +120,16 @@ auto DiskExtendibleHashTable<K, V, KC>::Insert(const K &key, const V &value, Tra
   ExtendibleHTableBucketPage<K, V, KC> * buc_page = buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   while(buc_page->IsFull())
   {
-    dir_page->IncrLocalDepth(buc_ind);
+    if(!IncrDirLocalDepth(dir_page, buc_ind, buc_page)) return false;
     buc_guard.Drop();
     buc_ind = dir_page->HashToBucketIndex(hash);
     buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
     if(buc_page_id_==INVALID_PAGE_ID){
-      InsertToNewBucket(dir_page, buc_ind, key, value);
-      break;
+      return InsertToNewBucket(dir_page, buc_ind, key, value);
     }
     buc_guard.Drop();
+    buc_ind = dir_page->HashToBucketIndex(hash);
+    buc_page_id_ = dir_page->GetBucketPageId(buc_ind);
     buc_guard = bpm_->FetchPageWrite(buc_page_id_);
     buc_page = buc_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   }
@@ -165,10 +166,11 @@ auto DiskExtendibleHashTable<K, V, KC>::InsertToNewBucket(ExtendibleHTableDirect
   }
 
 template <typename K, typename V, typename KC>
-auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectoryPage *directory, uint32_t bucket_idx) -> bool
+auto DiskExtendibleHashTable<K, V, KC>::IncrDirLocalDepth(
+  ExtendibleHTableDirectoryPage *directory, 
+  uint32_t bucket_idx,
+  ExtendibleHTableBucketPage<K,V,KC> * old_buc_page) -> bool
 {
-  ExtendibleHTableBucketPage<K, V, KC> * old_buc_page = bpm_->FetchPageWrite(directory->GetBucketPageId(bucket_idx)).AsMut<ExtendibleHTableBucketPage<K, V, KC>>();  
-
   uint32_t ld = directory->GetLocalDepth(bucket_idx);
   if(ld+1>directory->GetGlobalDepth()){
     directory->IncrGlobalDepth();
@@ -185,7 +187,8 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrLocalDepth(ExtendibleHTableDirectory
   WritePageGuard write_buc2_page_guard = buc2_page_guard.UpgradeWrite();
   ExtendibleHTableBucketPage<K, V, KC> * buc1_page = write_buc1_page_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
   ExtendibleHTableBucketPage<K, V, KC> * buc2_page = write_buc2_page_guard.AsMut<ExtendibleHTableBucketPage<K, V, KC>>();
-
+  buc1_page->Init(bucket_max_size_);
+  buc2_page->Init(bucket_max_size_);
   // Redistribute data
   for(size_t idx=0; idx<old_buc_page->Size(); idx++){
     auto [key, value] = old_buc_page->EntryAt(idx);
