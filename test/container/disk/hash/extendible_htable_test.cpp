@@ -35,7 +35,6 @@ TEST(ExtendibleHTableTest, InsertTest1) {
   for (int i = 0; i < num_keys; i++) {
     bool inserted = ht.Insert(i, i);
     ASSERT_TRUE(inserted);
-    ht.PrintHT();
     std::vector<int> res;
     ht.GetValue(i, &res);
     ASSERT_EQ(1, res.size());
@@ -110,6 +109,7 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
     ASSERT_EQ(i, res[0]);
   }
 
+  ht.PrintHT();
   ht.VerifyIntegrity();
 
   // check that they were actually inserted
@@ -121,6 +121,7 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
     ASSERT_EQ(i, res[0]);
   }
 
+  ht.PrintHT();
   ht.VerifyIntegrity();
 
   // try to get some keys that don't exist/were not inserted
@@ -131,6 +132,7 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
     ASSERT_EQ(0, res.size());
   }
 
+  ht.PrintHT();
   ht.VerifyIntegrity();
 
   // remove the keys we inserted
@@ -142,7 +144,8 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
     ASSERT_EQ(0, res.size());
   }
 
-  ht.VerifyIntegrity();
+  ht.PrintHT();
+  ht.VerifyIntegrity(); // TODO: check this
 
   // try to remove some keys that don't exist/were not inserted
   for (int i = num_keys; i < 2 * num_keys; i++) {
@@ -154,6 +157,7 @@ TEST(ExtendibleHTableTest, RemoveTest1) {
     ASSERT_EQ(0, res.size());
   }
 
+  ht.PrintHT();
   ht.VerifyIntegrity();
 }
 

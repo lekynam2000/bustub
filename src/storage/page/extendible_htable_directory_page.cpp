@@ -60,6 +60,11 @@ auto ExtendibleHTableDirectoryPage::GetLocalDepthMask(uint32_t bucket_idx) const
   return ((1<<ld)-1);
 }
 
+auto ExtendibleHTableDirectoryPage::GetMaxDepth() const -> uint32_t 
+{ 
+  return max_depth_; 
+}
+
 auto ExtendibleHTableDirectoryPage::GetGlobalDepth() const -> uint32_t 
 { 
   return global_depth_; 

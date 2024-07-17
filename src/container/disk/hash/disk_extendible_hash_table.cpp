@@ -172,10 +172,11 @@ auto DiskExtendibleHashTable<K, V, KC>::IncrDirLocalDepth(
   ExtendibleHTableBucketPage<K,V,KC> * old_buc_page) -> bool
 {
   uint32_t ld = directory->GetLocalDepth(bucket_idx);
+  if(ld+1>directory->GetMaxDepth()) return false;
   if(ld+1>directory->GetGlobalDepth()){
     directory->IncrGlobalDepth();
   }
-  uint32_t mask = 1<<(ld+1);
+  uint32_t mask = 1<<ld;
   page_id_t old_page_id = directory->GetBucketPageId(bucket_idx);
   page_id_t * buc1_page_id_ptr = new page_id_t(0);
   page_id_t * buc2_page_id_ptr = new page_id_t(0);
