@@ -24,7 +24,7 @@ void ExtendibleHTableDirectoryPage::Init(uint32_t max_depth)
 {
   max_depth_ = max_depth;
   for(size_t i=0;i<HTABLE_DIRECTORY_ARRAY_SIZE;i++){
-    bucket_page_ids_[i]=0;
+    bucket_page_ids_[i]=INVALID_PAGE_ID;
   }
 }
 

@@ -44,6 +44,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::BinSearch(const K &key, const KC &cmp
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool 
 {
+    if(size_==0) return 0;
     uint32_t idx = BinSearch(key, cmp);
     if(cmp(array_[idx].first, key)==0) 
     {
@@ -69,6 +70,7 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, 
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Remove(const K &key, const KC &cmp) -> bool {
+  if(size_==0) return 0;
   uint32_t idx = BinSearch(key, cmp);
   if(cmp(array_[idx].first,key)!=0) return false;
   for(uint32_t i=idx; i<size_; i++){

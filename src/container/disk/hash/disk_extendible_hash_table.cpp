@@ -244,7 +244,7 @@ auto DiskExtendibleHashTable<K, V, KC>::Remove(const K &key, Transaction *transa
   while(buc_page->IsEmpty()){
     uint32_t ld = dir_page->GetLocalDepth(bucket_idx);
     if(ld==0) break;
-    uint32_t new_buc_idx = bucket_idx ^ (1<<ld);
+    uint32_t new_buc_idx = bucket_idx ^ (1<<(ld-1));
     if(ld == dir_page->GetLocalDepth(new_buc_idx))
     {
       page_id_t new_page_id = dir_page->GetBucketPageId(new_buc_idx);
